@@ -37,7 +37,9 @@
   .chip{padding:8px 12px;font-size:14px}
   textarea{width:100%;min-height:90px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);
     color:var(--fg);padding:10px;font:inherit;font-size:16px;resize:vertical}
-  textarea:focus{outline:none;border-color:var(--fire)}
+  textarea:focus,input:focus{outline:none;border-color:var(--fire)}
+  input[type=tel]{width:100%;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);
+    padding:12px;font:18px monospace;direction:ltr;text-align:left}
   .send{width:100%;padding:15px;border:0;border-radius:14px;background:var(--fire);color:#fff;
     font:800 19px 'Cairo',Tahoma,sans-serif;cursor:pointer}
   .send:active{background:var(--fire-dark)}
@@ -76,6 +78,8 @@
       <h3>إيه اللي مكانش عاجبك؟ (اختار كل اللي ينطبق)</h3>
       <div id="negs"></div>
       <textarea id="badComment" placeholder="حاجة تانية حابب تقولها؟"></textarea>
+      <h3 style="margin-top:14px">رقم تليفونك عشان الإدارة تكلمك وتحل المشكلة</h3>
+      <input id="custPhone" type="tel" inputmode="tel" placeholder="01xxxxxxxxx" autocomplete="tel">
     </div>
 
     <div class="err" id="err"></div>
@@ -117,6 +121,7 @@ const NEGATIVES = {
 const PHONE = new URLSearchParams(location.search).get('p') || '';
 const stars = {}; let firstTime = ''; const negSel = new Set();
 const $ = id => document.getElementById(id);
+if (/^201\d{9}$/.test(PHONE)) $('custPhone').value = '0' + PHONE.slice(2);
 
 const qs = $('qs');
 QUESTIONS.forEach(q => {
@@ -173,9 +178,15 @@ $('sendBtn').onclick = async () => {
   if (QUESTIONS.some(q => !stars[q.id])) { err.textContent = 'من فضلك قيّم كل الأسئلة بالنجوم'; return; }
   if (!firstTime) { err.textContent = 'من فضلك قولنا دي أول مرة تطلب ولا لأ'; return; }
   const bad = isBad();
+  let typed = $('custPhone').value.replace(/\D/g, '');
+  if (typed.startsWith('20')) typed = '0' + typed.slice(2);
+  if (bad && !/^01\d{9}$/.test(typed)) {
+    err.textContent = 'من فضلك اكتب رقم تليفونك صح (11 رقم يبدأ بـ 01)';
+    $('custPhone').focus(); return;
+  }
   const shown = QUESTIONS.filter(q => stars[q.id] <= 3).flatMap(q => NEGATIVES[q.id]);
   const data = {
-    phone: PHONE, stars, firstTime,
+    phone: bad ? typed : PHONE, stars, firstTime,
     negatives: bad ? [...negSel].filter(t => shown.includes(t)) : [],
     comment: bad ? $('badComment').value : $('suggest').value
   };
